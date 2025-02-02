@@ -24,8 +24,12 @@ The focus of this library is to provide a minimum viable set of tools for drawin
 - [ ] Movable bounding box (may be moved into its own repo)
 - [ ] Serializable 
 - [ ] Layout
+  - [ ] Padding
+  - [ ] Margin
   - [ ] Inline
   - [ ] Block
 - [ ] Animation
+  - [ ] Global timeline mode
+  - [ ] Interactivity response mode
 - [ ] Caching
 - [ ] Testing
