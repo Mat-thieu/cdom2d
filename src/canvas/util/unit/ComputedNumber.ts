@@ -42,7 +42,7 @@ export default class ComputedNumber {
    }
   }
 
-  // Todo this method is imperfect, will allow strange values like 100pxvh
+  // Todo this method is imperfect, will allow strange values like 100pxvh... but maybe that's fine
   parseValue(value: string | number) {
     if (typeof value === 'number') {
       this.dependency = ComputedNumberDependency.none;
