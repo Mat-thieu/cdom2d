@@ -8,6 +8,8 @@ The focus of this library is to provide a minimum viable set of tools for drawin
 
 ## Features and planned features
 
+- [x] Canvas pan
+- [x] Canvas zoom
 - [x] Layering
   - [x] Grouping
   - [x] Rect
