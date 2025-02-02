@@ -1,0 +1,121 @@
+import Layer, { LayerOptions } from './Layer';
+import type Canvas from '../Canvas';
+
+export type RectOptions = LayerOptions & {
+  fill?: string;
+  radius?: number | [number, number, number, number];
+  strokeColor?: string;
+  strokeWidth?: number;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+};
+
+const settableValues = [
+  'fill',
+  'radius',
+  'strokeColor',
+  'strokeWidth',
+  'shadowColor',
+  'shadowBlur',
+  'shadowOffsetX',
+  'shadowOffsetY',
+];
+
+/**
+ * NOTE Stroke should the the composition layer
+ * Shadows are hard, and if I can properly supply the stroke the shadow should be correct
+ * Right now an attempt has been made to do this in reverse, but it's not working and will result in more code
+ */
+
+export default class Rect extends Layer {
+  fill: string;
+  radius: number | [number, number, number, number];
+  strokeColor: string;
+  strokeWidth: number;
+  shadowColor?: string;
+  shadowBlur: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+
+  shadowCompositionLayer: OffscreenCanvas | null = null;
+
+  constructor(options: RectOptions) {
+    super(options);
+    this.fill = options.fill || 'rgba(0,0,0,0)';
+    this.radius = options.radius || 0;
+    this.strokeColor = options.strokeColor || 'rgba(0,0,0,0)';
+    this.strokeWidth = options.strokeWidth || 0;
+    this.shadowColor = options.shadowColor;
+    this.shadowBlur = options.shadowBlur || 0;
+    this.shadowOffsetX = options.shadowOffsetX || 0;
+    this.shadowOffsetY = options.shadowOffsetY || 0;
+
+    this.handleShadow();
+  }
+
+  set(key: keyof RectOptions, value: any) { // ! TODO Keyof rectoptions volatile, value any
+    let visibleChange = false;
+    if (settableValues.includes(key)) {
+      if (this[key as keyof this] !== value) {
+        visibleChange = true;
+      }
+      this[key as keyof this] = value;
+    }
+    super.set(key as keyof LayerOptions, value, visibleChange);
+  }
+
+  handleShadow() {
+
+  }
+
+  render(canvas: Canvas, parentMatrix: DOMMatrix) {
+    super.render(canvas, parentMatrix, (ctx, x, y) => {
+      ctx.beginPath();
+      ctx.fillStyle = this.fill;
+      // TODO proper shadow handling, probably a composite implementation
+      // if (this.shadowColor) {
+      //   ctx.shadowColor = this.shadowColor;
+      //   ctx.shadowBlur = this.shadowBlur;
+      //   ctx.shadowOffsetX = this.shadowOffsetX;
+      //   ctx.shadowOffsetY = this.shadowOffsetY;
+      // }
+      const rectPath = new Path2D();
+      rectPath.roundRect(x, y, this.width.activePixelValue, this.height.activePixelValue, this.radius);
+      this.activePath = rectPath;
+      ctx.fill(rectPath);
+
+      // Handle stroke
+      if (this.strokeWidth) {
+        ctx.save();
+        ctx.strokeStyle = this.strokeColor;
+        ctx.lineWidth = this.strokeWidth * 2;
+  
+        // Create an inverse path allowing border to be drawn outside the fill
+        const inversePath = new Path2D();
+        inversePath.rect(
+          // Offset path for center-center origin
+          x - this.strokeWidth,
+          y - this.strokeWidth,
+          this.width.activePixelValue + (this.strokeWidth * 2),
+          this.height.activePixelValue + (this.strokeWidth * 2),
+        );
+        inversePath.addPath(rectPath);
+        ctx.clip(inversePath, 'evenodd'); // Clip to cut out inner stroke
+        ctx.stroke(rectPath);
+  
+        // Debug check to see the clip in action
+        // ctx.fillStyle = 'rgba(255, 0, 255, 0.6)';
+        // ctx.fillRect(
+        //   x - this.strokeWidth,
+        //   y - this.strokeWidth,
+        //   this.width.activePixelValue + (this.strokeWidth * 2),
+        //   this.height.activePixelValue + (this.strokeWidth * 2),
+        // );
+        
+        ctx.restore();
+      }
+    });
+  }
+}
