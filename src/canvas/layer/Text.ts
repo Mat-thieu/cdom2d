@@ -7,6 +7,7 @@ export type TextOptions = LayerOptions & {
   fontStyle?: string;
   fontWeight?: string;
   fontFamily?: string;
+  letterSpacing?: number;
   lineHeight?: number;
   backgroundColor?: string;
   fill?: string;
@@ -30,6 +31,7 @@ const settableValues = [
   'fontStyle',
   'fontWeight',
   'fontFamily',
+  'letterSpacing',
   'lineHeight',
   'backgroundColor',
   'fill',
@@ -47,6 +49,7 @@ export default class Text extends Layer {
   fontStyle: string;
   fontWeight: string;
   fontFamily: string;
+  letterSpacing: number;
   lineHeight: number;
   backgroundColor?: string;
   fill: string;
@@ -64,6 +67,7 @@ export default class Text extends Layer {
     this.fontStyle = options.fontStyle || 'normal';
     this.fontWeight = options.fontWeight || 'normal';
     this.fontFamily = options.fontFamily || 'serif';
+    this.letterSpacing = options.letterSpacing || 0;
     this.lineHeight = options.lineHeight || 1.2;
     this.backgroundColor = options.backgroundColor;
     this.fill = options.fill || 'rgba(0,0,0,0)';
@@ -106,6 +110,7 @@ export default class Text extends Layer {
     ctx.restore();
   }
 
+  // Todo leverage measurement caching for these so they don't have to be recalculated every render
   private drawTextLines(ctx: CanvasRenderingContext2D, x: number, y: number) {
     const wordMetrics = this.textContent.split(' ').map((word) => ({
       word,
@@ -116,23 +121,19 @@ export default class Text extends Layer {
 
     let currentLineIndex = 0;
     const lines: TextLine[] = [];
-    const createLine = () => {
-      lines.push({ words: [], width: 0 });
+    const createLine = (word: string, width: number) => {
+      lines.push({ words: [word], width });
     }
-    createLine();
+    // Create line with first word as no checks need to happen and first line needs to exist
+    // remove first from array
+    createLine(wordMetrics[0].word, wordMetrics[0].metrics.width);
+    wordMetrics.shift();
+
     for (const wordMetric of wordMetrics) {
       const currentLine = lines[currentLineIndex];
-      if (!currentLine.words.length) {
-        currentLine.width += wordMetric.metrics.width;
-        currentLine.words.push(wordMetric.word);
-        continue;
-      }
       if (currentLine.width + spaceMetrics.width + wordMetric.metrics.width > this.width.activePixelValue) {
-        createLine();
+        createLine(wordMetric.word, wordMetric.metrics.width);
         currentLineIndex++;
-        const currentLine = lines[currentLineIndex];
-        currentLine.width += wordMetric.metrics.width;
-        currentLine.words.push(wordMetric.word);
         continue;
       }
       currentLine.width += spaceMetrics.width + wordMetric.metrics.width;
@@ -156,6 +157,7 @@ export default class Text extends Layer {
       ctx.fillStyle = this.fill;
       ctx.textBaseline = 'top';
       ctx.font = this.getFontString();
+      ctx.letterSpacing = `${this.letterSpacing}px`;
       this.drawTextLines(ctx, x, y);
     });
   }
