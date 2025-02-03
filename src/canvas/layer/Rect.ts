@@ -34,7 +34,7 @@ export default class Rect extends Layer {
   shadowOffsetY: number;
 
   constructor(options: RectOptions) {
-    super(options);
+    super(options, settableValues);
     this.fill = options.fill || 'rgba(0,0,0,0)';
     this.radius = options.radius || 0;
     this.strokeColor = options.strokeColor || 'rgba(0,0,0,0)';
@@ -45,32 +45,19 @@ export default class Rect extends Layer {
     this.shadowOffsetY = options.shadowOffsetY || 0;
   }
 
-  set(key: keyof RectOptions, value: any) { // ! TODO Keyof rectoptions volatile, value any
-    let visibleChange = false;
-    if (settableValues.includes(key)) {
-      if (this[key as keyof this] !== value) {
-        visibleChange = true;
-      }
-      this[key as keyof this] = value;
-    }
-    super.set(key as keyof LayerOptions, value, visibleChange);
+  private setShadow(ctx: CanvasRenderingContext2D) {
+    if (!this.shadowColor) return;
+    ctx.shadowColor = this.shadowColor;
+    ctx.shadowBlur = this.shadowBlur;
+    ctx.shadowOffsetX = this.shadowOffsetX;
+    ctx.shadowOffsetY = this.shadowOffsetY;
   }
 
-  setShadow(ctx: CanvasRenderingContext2D) {
-    if (this.shadowColor) {
-      ctx.shadowColor = this.shadowColor;
-      ctx.shadowBlur = this.shadowBlur;
-      ctx.shadowOffsetX = this.shadowOffsetX;
-      ctx.shadowOffsetY = this.shadowOffsetY;
-    }
-  }
-
-  setStroke(path: Path2D, ctx: CanvasRenderingContext2D) {
-    if (this.strokeWidth) {
-      ctx.strokeStyle = this.strokeColor;
-      ctx.lineWidth = this.strokeWidth;
-      ctx.stroke(path);  
-    }
+  private setStroke(path: Path2D, ctx: CanvasRenderingContext2D) {
+    if (!this.strokeWidth) return;
+    ctx.strokeStyle = this.strokeColor;
+    ctx.lineWidth = this.strokeWidth;
+    ctx.stroke(path);  
   }
 
   render(canvas: Canvas, parentMatrix: DOMMatrix) {
@@ -81,8 +68,8 @@ export default class Rect extends Layer {
       const rectPath = new Path2D();
       rectPath.roundRect(x, y, this.width.activePixelValue, this.height.activePixelValue, this.radius);
       this.activePath = rectPath;
-      ctx.fill(rectPath);
       this.setStroke(rectPath, ctx);
+      ctx.fill(rectPath);
     });
   }
 }

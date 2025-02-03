@@ -17,18 +17,6 @@ export type LayerOptions = {
   className?: string;
 };
 
-const settableValues = [
-  'x',
-  'y',
-  'skewX',
-  'skewY',
-  'scaleX',
-  'scaleY',
-  'rotation',
-  'width',
-  'height',
-];
-
 export default abstract class Layer {
   canvas: Canvas | null = null;
   parentLayer: Layer | null = null;
@@ -50,6 +38,18 @@ export default abstract class Layer {
 
   activePath: Path2D | null = null;
 
+  settableValues = [
+    'x',
+    'y',
+    'skewX',
+    'skewY',
+    'scaleX',
+    'scaleY',
+    'rotation',
+    'width',
+    'height',
+  ];
+
   // Track per-element if a visual change occurs, then allow each connected canvas to redraw it as such
   // changed: boolean;
   
@@ -62,7 +62,8 @@ export default abstract class Layer {
   // Another condition is that the underlying layer covers the changed layer entirely
   // hasOpacity: boolean;
 
-  constructor(options: LayerOptions) {
+  constructor(options: LayerOptions, settableValues: string[] = []) {
+    this.settableValues = this.settableValues.concat(settableValues);
     this.width = new ComputedNumber(options.width || 0, ComputedNumberDerivative.width);
     this.height = new ComputedNumber(options.height || 0, ComputedNumberDerivative.height);
     this.x = new ComputedNumber(options.x || 0, ComputedNumberDerivative.width);
@@ -77,7 +78,7 @@ export default abstract class Layer {
 
   // ! Todo a lot, this is very clumsy and error prone
   set(key: keyof LayerOptions, value: any, visibleChange = false) { // ! Keyof layeroptions bad
-    if (settableValues.includes(key)) {
+    if (this.settableValues.includes(key)) {
       const currentValue = this[key as keyof this];
       if (currentValue !== value) { // ! always true for ComputedNumber
         visibleChange = true;

@@ -1,9 +1,15 @@
 import './style.css'
-import { Canvas, Rect, Component } from "./canvas/index";
+import { Canvas, Rect, Text, Component } from "./canvas/index";
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <canvas id="canvas1" style="border: 1px solid cyan;"></canvas>
-  <canvas id="canvas2" style="border: 1px solid cyan;"></canvas>
+  <canvas id="canvas2" style="border: 1px solid cyan;">
+    <rect x="10" y="10" width="100" height="100" fill="red">
+      <text x="50" y="50" fill="white">
+        Text Contents
+      </text>
+    </rect> 
+  </canvas>
 `;
 
 const canvas = new Canvas(document.querySelector<HTMLCanvasElement>('#canvas1') as HTMLCanvasElement, {
@@ -57,6 +63,28 @@ const background = new Rect({
 });
 canvas2.add(background);
 
+const text = new Text({
+  textContent: 'Hello There World More Text MORE text',
+  fontWeight: 'bold',
+  fontStyle: 'italic',
+  fontFamily: 'Helvetica',
+  fontSize: 36,
+  className: 'text',
+  backgroundColor: 'purple',
+  x: 0,
+  y: 0,
+  width: '300px',
+  height: '200px',
+  fill: 'red',
+  strokeColor: 'black',
+  strokeWidth: 2,
+  shadowColor: 'rgba(0, 0, 0, 0.5)',
+  shadowBlur: 10,
+  shadowOffsetX: 0,
+  shadowOffsetY: 40,
+});
+canvas2.add(text);
+
 const backgroundC1 = new Rect({
   className: 'background',
   x: '10%',
@@ -66,7 +94,7 @@ const backgroundC1 = new Rect({
   fill: 'orange',
   radius: [40, 0, 0, 0],
   strokeColor: 'black',
-  strokeWidth: 1,
+  strokeWidth: 4,
 });
 canvas.add(backgroundC1);
 
