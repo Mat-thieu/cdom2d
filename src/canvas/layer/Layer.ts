@@ -36,8 +36,6 @@ export default abstract class Layer {
   width: ComputedNumber;
   height: ComputedNumber;
 
-  activePath: Path2D | null = null;
-
   settableValues = [
     'x',
     'y',
@@ -77,17 +75,21 @@ export default abstract class Layer {
   }
 
   // ! Todo a lot, this is very clumsy and error prone
-  set(key: keyof LayerOptions, value: any, visibleChange = false) { // ! Keyof layeroptions bad
-    if (this.settableValues.includes(key)) {
-      const currentValue = this[key as keyof this];
-      if (currentValue !== value) { // ! always true for ComputedNumber
+  // ! Make sure there's a way to determine cache invalidation too
+  set(key: keyof LayerOptions, value: any) { // ! Keyof layeroptions bad
+    let visibleChange = false;
+    if (!this.settableValues.includes(key)) throw new Error(`Can't set ${key} on layer`);
+    const currentValue = this[key as keyof this];
+    if (currentValue instanceof ComputedNumber) {
+      if (currentValue.providedValue !== value) {
         visibleChange = true;
       }
-      if (currentValue instanceof ComputedNumber) {
-        (this[key as keyof this] as ComputedNumber) = new ComputedNumber(value, currentValue.derivative);
-      } else {
-        this[key as keyof this] = value;
+      (this[key as keyof this] as ComputedNumber) = new ComputedNumber(value, currentValue.derivative);
+    } else {
+      if (currentValue !== value) {
+        visibleChange = true;
       }
+      this[key as keyof this] = value;
     }
     if (visibleChange) this.flagRedraw();
   }
@@ -192,8 +194,11 @@ export default abstract class Layer {
     ]);
   }
 
-  seedComputedUnits() {
-    const inhertedUnits = [
+  // TODO this function should be defined in the inheriting classes and returns the bounds for layout
+  // getLayoutDimensionBounds()
+
+  seedComputedUnits(ctx: CanvasRenderingContext2D) {
+    const computedUnits = [
       this.width,
       this.height,
       this.x,
@@ -201,7 +206,7 @@ export default abstract class Layer {
     ];
 
     // todo this is kinda messy
-    for (const unit of inhertedUnits) {
+    for (const unit of computedUnits) {
       if (unit.dependency === ComputedNumberDependency.viewport && this.canvas) {
         const targetProperty = unit.unit === ComputedNumberUnit.vw ? 'width' : 'height';
         unit.seed(this.canvas[targetProperty].activePixelValue);
@@ -212,10 +217,12 @@ export default abstract class Layer {
         if (this.parentLayer) {
           unit.seed(this.parentLayer[targetProperty].activePixelValue);
         } else if (this.canvas) {
-          unit.seed(this.canvas[targetProperty].activePixelValue);     
+          unit.seed(this.canvas[targetProperty].activePixelValue);
         }        
       }
     }
+
+    return computedUnits;
   }
 
   storePointsFromMatrix(m: DOMMatrix) {
@@ -241,7 +248,7 @@ export default abstract class Layer {
     renderLayerType?: (ctx: CanvasRenderingContext2D, x: number, y: number) => void,
   ) {
     const { ctx } = canvas;
-    this.seedComputedUnits();
+    this.seedComputedUnits(ctx);
     ctx.save();
 
     const centerWidth = this.width.activePixelValue / 2;
@@ -268,9 +275,7 @@ export default abstract class Layer {
 
     // Render children
     const childMatrix = m.translate(-centerWidth, -centerHeight); // offset origin-center of parent so 0,0 is top-left
-    for (const layer of this.layers) {
-      layer.render(canvas, childMatrix);
-    }
+    for (const layer of this.layers) layer.render(canvas, childMatrix);
 
     // ! DEBUG Draw and get points of box
     // ctx.save();

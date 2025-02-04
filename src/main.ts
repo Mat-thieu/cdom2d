@@ -63,29 +63,41 @@ const background = new Rect({
 });
 canvas2.add(background);
 
+const textBox = new Rect({
+  className: 'background2',
+  x: '10%',
+  y: '10%',
+  width: '50%',
+  height: '300px',
+  rotation: 20,
+  scaleX: 0.8,
+  fill: 'cyan',
+});
+canvas2.add(textBox);
+
 const text = new Text({
+  className: 'text',
   textContent: 'Hello There World More Text MORE text',
   fontWeight: 'bold',
   fontStyle: 'normal',
   fontFamily: 'Helvetica',
   lineHeight: 1.2,
   letterSpacing: 0,
-  fontSize: 36,
-  className: 'text',
+  fontSize: 40,
   backgroundColor: 'purple',
-  x: 0,
-  y: 0,
-  width: '50%',
-  height: '200px',
+  x: '10%',
+  y: 30,
+  width: '80%',
+  height: 'auto',
   fill: 'red',
   strokeColor: 'black',
-  strokeWidth: 2,
+  strokeWidth: 10,
   shadowColor: 'rgba(0, 0, 0, 0.5)',
   shadowBlur: 10,
   shadowOffsetX: 0,
   shadowOffsetY: 40,
 });
-canvas2.add(text);
+textBox.addChild(text);
 
 const backgroundC1 = new Rect({
   className: 'background',
@@ -96,7 +108,7 @@ const backgroundC1 = new Rect({
   fill: 'orange',
   radius: [40, 0, 0, 0],
   strokeColor: 'black',
-  strokeWidth: 4,
+  strokeWidth: 20,
 });
 canvas.add(backgroundC1);
 
@@ -156,6 +168,7 @@ canvas.add(rect);
 
 
 Object.assign(window, {
+  textBox,
   canvas2,
   backgroundC1,
   rect,

@@ -1,5 +1,6 @@
 import Layer, { LayerOptions } from './Layer';
 import type Canvas from '../Canvas';
+import { ComputedNumberDependency, ComputedNumberDerivative, ComputedNumberUnit } from '../util/unit/ComputedNumber';
 
 export type TextOptions = LayerOptions & {
   textContent?: string;
@@ -23,7 +24,7 @@ export type TextOptions = LayerOptions & {
 type TextLine = {
   words: string[];
   width: number;
-}
+};
 
 const settableValues = [
   'textContent',
@@ -60,10 +61,12 @@ export default class Text extends Layer {
   shadowOffsetX: number;
   shadowOffsetY: number;
 
-  constructor(options: TextOptions) {
+  textLinesCache: [string, TextLine[]] = ['', []];
+
+  constructor(options: TextOptions) { // todo for any constructor implement more rigid fallbacks. Some "falsey" values can be valid and shouldn't be defaulted
     super(options, settableValues);
     this.textContent = options.textContent || '';
-    this.fontSize = options.fontSize || 48; // should probably not be default, and be a computed number
+    this.fontSize = options.fontSize || 30; // should probably not be default, and be a computed number
     this.fontStyle = options.fontStyle || 'normal';
     this.fontWeight = options.fontWeight || 'normal';
     this.fontFamily = options.fontFamily || 'serif';
@@ -110,14 +113,17 @@ export default class Text extends Layer {
     ctx.restore();
   }
 
-  // Todo leverage measurement caching for these so they don't have to be recalculated every render
-  private drawTextLines(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  private calculateTextLines(ctx: CanvasRenderingContext2D): TextLine[] {
+    // if (this.textLinesCache[0] === this.textContent) return this.textLinesCache[1];
+    ctx.save();
+    const fontString = this.getFontString();
+    ctx.font = fontString;
+
     const wordMetrics = this.textContent.split(' ').map((word) => ({
       word,
       metrics: ctx.measureText(word),
     }));
     const spaceMetrics = ctx.measureText(' ');
-    const lineHeight = this.fontSize * this.lineHeight;
 
     let currentLineIndex = 0;
     const lines: TextLine[] = [];
@@ -129,6 +135,7 @@ export default class Text extends Layer {
     createLine(wordMetrics[0].word, wordMetrics[0].metrics.width);
     wordMetrics.shift();
 
+    // Determine each line to fit the width
     for (const wordMetric of wordMetrics) {
       const currentLine = lines[currentLineIndex];
       if (currentLine.width + spaceMetrics.width + wordMetric.metrics.width > this.width.activePixelValue) {
@@ -139,15 +146,48 @@ export default class Text extends Layer {
       currentLine.width += spaceMetrics.width + wordMetric.metrics.width;
       currentLine.words.push(wordMetric.word);
     }
+    ctx.restore();
 
-    for (let i = 0; i < lines.length; i++) { // Can combine into createLine
+    // this.textLinesCache[0] = this.textContent;
+    // this.textLinesCache[1] = lines;
+
+    return lines;
+  }
+
+  // Todo leverage measurement caching for these so they don't have to be recalculated every render
+  private drawTextLines(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const lineHeight = this.fontSize * this.lineHeight;
+    const lines = this.calculateTextLines(ctx);
+
+    const fontString = this.getFontString();
+    ctx.font = fontString;
+    // Draw each line
+    for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const lineContent = line.words.join(' ');
       const lineY = y + (i * lineHeight);
-      const lineX = x;
-      this.setStroke(lineContent, ctx, lineX, lineY);
-      ctx.fillText(lineContent, lineX, lineY);
+      this.setStroke(lineContent, ctx, x, lineY);
+      ctx.fillText(lineContent, x, lineY);
     }
+  }
+
+  // Todo this is awful, inefficient, but gets the result I want (actually it's one tick late so no)
+  // ! THIS RELIES ON this.width.activePixelValue so the Layer function needs to happen first
+  // ideally this is handled on the Layer level where it requests the layout sizes, but it's not straigth forward
+  seedComputedUnits(ctx: CanvasRenderingContext2D) {
+    const lines = this.calculateTextLines(ctx);
+    const lineHeight = this.fontSize * this.lineHeight;
+    const height = lines.length * lineHeight;
+    const computedUnits = super.seedComputedUnits(ctx);
+
+    for (const unit of computedUnits) {
+      if (unit.dependency === ComputedNumberDependency.auto) {
+        unit.seed(height);
+        continue;
+      }
+    }
+
+    return computedUnits;
   }
 
   render(canvas: Canvas, parentMatrix: DOMMatrix) {
@@ -156,9 +196,9 @@ export default class Text extends Layer {
       this.setShadow(ctx);
       ctx.fillStyle = this.fill;
       ctx.textBaseline = 'top';
-      ctx.font = this.getFontString();
       ctx.letterSpacing = `${this.letterSpacing}px`;
-      this.drawTextLines(ctx, x, y);
+      ctx.lineJoin = 'round'; // Removes text stroke sharp edges and artifacts, but may arguably be somewhat "incorrect"
+      if (this.textContent) this.drawTextLines(ctx, x, y);
     });
   }
 }

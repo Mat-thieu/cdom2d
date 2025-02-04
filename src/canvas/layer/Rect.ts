@@ -25,7 +25,7 @@ const settableValues = [
 
 export default class Rect extends Layer {
   fill: string;
-  radius: number | [number, number, number, number];
+  radius: number | [number, number, number, number]; // todo should be computed, allow for 50% to make circles for example
   strokeColor: string;
   strokeWidth: number;
   shadowColor?: string;
@@ -53,11 +53,11 @@ export default class Rect extends Layer {
     ctx.shadowOffsetY = this.shadowOffsetY;
   }
 
-  private setStroke(path: Path2D, ctx: CanvasRenderingContext2D) {
+  private setStroke(ctx: CanvasRenderingContext2D) {
     if (!this.strokeWidth) return;
     ctx.strokeStyle = this.strokeColor;
     ctx.lineWidth = this.strokeWidth;
-    ctx.stroke(path);  
+    ctx.stroke();  
   }
 
   render(canvas: Canvas, parentMatrix: DOMMatrix) {
@@ -65,11 +65,9 @@ export default class Rect extends Layer {
       ctx.beginPath();
       this.setShadow(ctx);
       ctx.fillStyle = this.fill;
-      const rectPath = new Path2D();
-      rectPath.roundRect(x, y, this.width.activePixelValue, this.height.activePixelValue, this.radius);
-      this.activePath = rectPath;
-      this.setStroke(rectPath, ctx);
-      ctx.fill(rectPath);
+      ctx.roundRect(x, y, this.width.activePixelValue, this.height.activePixelValue, this.radius);
+      this.setStroke(ctx);
+      ctx.fill();
     });
   }
 }

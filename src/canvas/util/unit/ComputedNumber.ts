@@ -2,6 +2,7 @@ export enum ComputedNumberDependency {
   parent = 'parent',
   viewport = 'viewport',
   none = 'none',
+  auto = 'auto',
 }
 
 export enum ComputedNumberUnit {
@@ -9,6 +10,7 @@ export enum ComputedNumberUnit {
   vh = 'vh',
   vw = 'vw',
   percent = 'percent',
+  auto = 'auto',
 }
 
 export enum ComputedNumberDerivative {
@@ -20,6 +22,7 @@ export enum ComputedNumberDerivative {
 }
 
 export default class ComputedNumber {
+  providedValue: string | number;
   value: number = 0;
   activePixelValue: number = 0;
   unit: ComputedNumberUnit = ComputedNumberUnit.px;
@@ -28,12 +31,13 @@ export default class ComputedNumber {
 
   constructor(value: string | number, derivative: ComputedNumberDerivative) {
     this.parseValue(value);
+    this.providedValue = value;
     this.derivative = derivative;
   }
 
   // Provide the derivative and set the activePixelValue depending on the unit
   seed(value: number) {
-    if (this.unit === ComputedNumberUnit.px) {
+    if ([ComputedNumberUnit.px, ComputedNumberUnit.auto].includes(this.unit)) {
       this.activePixelValue = value;
       return;
     }
@@ -53,6 +57,13 @@ export default class ComputedNumber {
     }
 
     const extractedValue = parseFloat(value as string);
+    if (value === 'auto') {
+      this.dependency = ComputedNumberDependency.auto;
+      this.unit = ComputedNumberUnit.auto;
+      this.activePixelValue = extractedValue;
+      this.value = 0; // Could use a null or 'auto' value here
+      return;
+    }
     if (value.endsWith('px')) {
       this.dependency = ComputedNumberDependency.none;
       this.unit = ComputedNumberUnit.px;
