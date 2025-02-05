@@ -61,7 +61,8 @@ export default class Text extends Layer {
   shadowOffsetX: number;
   shadowOffsetY: number;
 
-  textLinesCache: [string, TextLine[]] = ['', []];
+  // TODO make this a cleaner construct, 2 cache values is not ideal
+  textLinesCache: [string, number, TextLine[]] = ['', 0, []];
 
   constructor(options: TextOptions) { // todo for any constructor implement more rigid fallbacks. Some "falsey" values can be valid and shouldn't be defaulted
     super(options, settableValues);
@@ -114,7 +115,11 @@ export default class Text extends Layer {
   }
 
   private calculateTextLines(ctx: CanvasRenderingContext2D): TextLine[] {
-    // if (this.textLinesCache[0] === this.textContent) return this.textLinesCache[1];
+    if ( // Check if current cache can be used
+      this.textLinesCache[0] === this.textContent
+      && this.textLinesCache[1] === this.width.activePixelValue
+    ) return this.textLinesCache[2];
+
     ctx.save();
     const fontString = this.getFontString();
     ctx.font = fontString;
@@ -148,8 +153,9 @@ export default class Text extends Layer {
     }
     ctx.restore();
 
-    // this.textLinesCache[0] = this.textContent;
-    // this.textLinesCache[1] = lines;
+    this.textLinesCache[0] = this.textContent;
+    this.textLinesCache[1] = this.width.activePixelValue;
+    this.textLinesCache[2] = lines;
 
     return lines;
   }
@@ -175,10 +181,10 @@ export default class Text extends Layer {
   // ! THIS RELIES ON this.width.activePixelValue so the Layer function needs to happen first
   // ideally this is handled on the Layer level where it requests the layout sizes, but it's not straigth forward
   seedComputedUnits(ctx: CanvasRenderingContext2D) {
+    const computedUnits = super.seedComputedUnits(ctx);
     const lines = this.calculateTextLines(ctx);
     const lineHeight = this.fontSize * this.lineHeight;
     const height = lines.length * lineHeight;
-    const computedUnits = super.seedComputedUnits(ctx);
 
     for (const unit of computedUnits) {
       if (unit.dependency === ComputedNumberDependency.auto) {
