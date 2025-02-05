@@ -62,6 +62,7 @@ export default class Text extends Layer {
   shadowOffsetY: number;
 
   // TODO make this a cleaner construct, 2 cache values is not ideal
+  // Should also contain font weight, family, size, letter spacing (not line height)
   textLinesCache: [string, number, TextLine[]] = ['', 0, []];
 
   constructor(options: TextOptions) { // todo for any constructor implement more rigid fallbacks. Some "falsey" values can be valid and shouldn't be defaulted
@@ -160,7 +161,7 @@ export default class Text extends Layer {
     return lines;
   }
 
-  // Todo leverage measurement caching for these so they don't have to be recalculated every render
+  // Todo leverage line caching for these so they don't have to be recalculated every render
   private drawTextLines(ctx: CanvasRenderingContext2D, x: number, y: number) {
     const lineHeight = this.fontSize * this.lineHeight;
     const lines = this.calculateTextLines(ctx);
@@ -177,8 +178,7 @@ export default class Text extends Layer {
     }
   }
 
-  // Todo this is awful, inefficient, but gets the result I want (actually it's one tick late so no)
-  // ! THIS RELIES ON this.width.activePixelValue so the Layer function needs to happen first
+  // Todo this is awful, inefficient, but gets the result I want for now
   // ideally this is handled on the Layer level where it requests the layout sizes, but it's not straigth forward
   seedComputedUnits(ctx: CanvasRenderingContext2D) {
     const computedUnits = super.seedComputedUnits(ctx);
