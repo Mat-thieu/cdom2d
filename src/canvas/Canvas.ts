@@ -42,8 +42,8 @@ export default class Canvas {
   constructor(canvasElement: HTMLCanvasElement, options: CanvasOptions) {
     this.canvasElement = canvasElement;
     this.ctx = canvasElement.getContext('2d') as CanvasRenderingContext2D;
-    this.width = new ComputedNumber(options.width || '100%', ComputedNumberDerivative.width);
-    this.height = new ComputedNumber(options.height || '100%', ComputedNumberDerivative.height);
+    this.width = new ComputedNumber(options.width || '100%', ComputedNumberDerivative.width, ComputedNumberDependency.parent);
+    this.height = new ComputedNumber(options.height || '100%', ComputedNumberDerivative.height, ComputedNumberDependency.parent);
     if (options.fps) this.fps = options.fps;
     if (options.zoom) this.zoom = options.zoom;
     if (options.panX) this.panX = options.panX;

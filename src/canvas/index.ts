@@ -1,9 +1,11 @@
 import CanvasClass from "./Canvas";
-import RectClass from "./layer/Rect";
-import TextClass from "./layer/Text";
+import LayerClass from "./layer/Layer";
+import TextLayerClass from "./layer/Text";
+import ImageLayerClass from "./layer/Image";
 import ComponentClass from "./layer/Component"
 
 export const Canvas = CanvasClass;
-export const Rect = RectClass;
-export const Text = TextClass;
+export const Layer = LayerClass;
+export const TextLayer = TextLayerClass;
+export const ImageLayer = ImageLayerClass;
 export const Component = ComponentClass;

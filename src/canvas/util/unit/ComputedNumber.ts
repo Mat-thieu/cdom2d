@@ -1,5 +1,6 @@
 export enum ComputedNumberDependency {
   parent = 'parent',
+  self = 'self',
   viewport = 'viewport',
   none = 'none',
   auto = 'auto',
@@ -29,10 +30,11 @@ export default class ComputedNumber {
   dependency: ComputedNumberDependency = ComputedNumberDependency.none;
   derivative: ComputedNumberDerivative;
 
-  constructor(value: string | number, derivative: ComputedNumberDerivative) {
-    this.parseValue(value);
-    this.providedValue = value;
+  constructor(value: string | number, derivative: ComputedNumberDerivative, dependencyPriority: ComputedNumberDependency = ComputedNumberDependency.none) {
+    this.dependency = dependencyPriority;
     this.derivative = derivative;
+    this.providedValue = value;
+    this.parseValue(value);
   }
 
   // Provide the derivative and set the activePixelValue depending on the unit
@@ -72,7 +74,9 @@ export default class ComputedNumber {
       return;
     }
     if (value.endsWith('%')) {
-      this.dependency = ComputedNumberDependency.parent;
+      this.dependency = this.dependency === ComputedNumberDependency.none 
+        ? ComputedNumberDependency.parent
+        : this.dependency;
       this.unit = ComputedNumberUnit.percent;
       this.value = extractedValue;
       return;

@@ -4,84 +4,54 @@ import { ComputedNumberDependency, ComputedNumberDerivative, ComputedNumberUnit 
 
 export type TextOptions = LayerOptions & {
   textContent?: string;
-  fontSize?: number;
-  fontStyle?: string;
-  fontWeight?: string;
-  fontFamily?: string;
-  letterSpacing?: number;
-  lineHeight?: number;
-  backgroundColor?: string;
-  fill?: string;
-  radius?: number | [number, number, number, number];
-  strokeColor?: string;
-  strokeWidth?: number;
-  shadowColor?: string;
-  shadowBlur?: number;
-  shadowOffsetX?: number;
-  shadowOffsetY?: number;
+  textStrokeColor?: string;
+  textStrokeWidth?: number;
+  textShadowColor?: string;
+  textShadowBlur?: number;
+  textShadowOffsetX?: number;
+  textShadowOffsetY?: number;
 };
 
 type TextLine = {
   words: string[];
   width: number;
+  y: number;
+  yMax: number;
 };
 
 const settableValues = [
   'textContent',
-  'fontSize',
-  'fontStyle',
-  'fontWeight',
-  'fontFamily',
-  'letterSpacing',
-  'lineHeight',
-  'backgroundColor',
-  'fill',
-  'strokeColor',
-  'strokeWidth',
-  'shadowColor',
-  'shadowBlur',
-  'shadowOffsetX',
-  'shadowOffsetY',
+  'textStrokeColor',
+  'textStrokeWidth',
+  'textShadowColor',
+  'textShadowBlur',
+  'textShadowOffsetX',
+  'textShadowOffsetY',
 ];
 
-export default class Text extends Layer {
+export default class TextLayer extends Layer {
   textContent: string;
-  fontSize: number;
-  fontStyle: string;
-  fontWeight: string;
-  fontFamily: string;
-  letterSpacing: number;
-  lineHeight: number;
-  backgroundColor?: string;
-  fill: string;
-  strokeColor: string;
-  strokeWidth: number;
-  shadowColor?: string;
-  shadowBlur: number;
-  shadowOffsetX: number;
-  shadowOffsetY: number;
+  textStrokeColor: string;
+  textStrokeWidth: number;
+  textShadowColor?: string;
+  textShadowBlur: number;
+  textShadowOffsetX: number;
+  textShadowOffsetY: number;
 
-  // TODO make this a cleaner construct, 2 cache values is not ideal
+  // TODO make this a cleaner construct, 2 cache values is not enough
+  // Tracks textContent and activePixelWidth
   // Should also contain font weight, family, size, letter spacing (not line height)
   textLinesCache: [string, number, TextLine[]] = ['', 0, []];
 
   constructor(options: TextOptions) { // todo for any constructor implement more rigid fallbacks. Some "falsey" values can be valid and shouldn't be defaulted
     super(options, settableValues);
     this.textContent = options.textContent || '';
-    this.fontSize = options.fontSize || 30; // should probably not be default, and be a computed number
-    this.fontStyle = options.fontStyle || 'normal';
-    this.fontWeight = options.fontWeight || 'normal';
-    this.fontFamily = options.fontFamily || 'serif';
-    this.letterSpacing = options.letterSpacing || 0;
-    this.lineHeight = options.lineHeight || 1.2;
-    this.backgroundColor = options.backgroundColor;
-    this.fill = options.fill || 'rgba(0,0,0,0)';
-    this.strokeColor = options.strokeColor || 'rgba(0,0,0,0)';
-    this.strokeWidth = options.strokeWidth || 0;
-    this.shadowColor = options.shadowColor;
-    this.shadowBlur = options.shadowBlur || 0;
-    this.shadowOffsetX = options.shadowOffsetX || 0;
-    this.shadowOffsetY = options.shadowOffsetY || 0;
+    this.textStrokeColor = options.textStrokeColor || 'rgba(0,0,0,0)';
+    this.textStrokeWidth = options.textStrokeWidth || 0;
+    this.textShadowColor = options.textShadowColor;
+    this.textShadowBlur = options.textShadowBlur || 0;
+    this.textShadowOffsetX = options.textShadowOffsetX || 0;
+    this.textShadowOffsetY = options.textShadowOffsetY || 0;
   }
 
   private getFontString() {
@@ -92,52 +62,61 @@ export default class Text extends Layer {
     return `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`;
   }
 
-  private setShadow(ctx: CanvasRenderingContext2D) {
-    if (!this.shadowColor) return;
-    ctx.shadowColor = this.shadowColor;
-    ctx.shadowBlur = this.shadowBlur;
-    ctx.shadowOffsetX = this.shadowOffsetX;
-    ctx.shadowOffsetY = this.shadowOffsetY;
+  private setTextShadow(ctx: CanvasRenderingContext2D) {
+    if (!this.textShadowColor) return;
+    ctx.shadowColor = this.textShadowColor;
+    ctx.shadowBlur = this.textShadowBlur;
+    ctx.shadowOffsetX = this.textShadowOffsetX;
+    ctx.shadowOffsetY = this.textShadowOffsetY;
   }
 
-  private setStroke(text: string, ctx: CanvasRenderingContext2D, x: number, y: number) {
-    if (!this.strokeWidth) return;
-    ctx.strokeStyle = this.strokeColor;
-    ctx.lineWidth = this.strokeWidth;
+  private setTextStroke(text: string, ctx: CanvasRenderingContext2D, x: number, y: number) {
+    if (!this.textStrokeWidth) return;
+    ctx.strokeStyle = this.textStrokeColor;
+    ctx.lineWidth = this.textStrokeWidth;
     ctx.strokeText(text, x, y);
   }
 
-  private setBackground(ctx: CanvasRenderingContext2D, x: number, y: number) {
-    if (!this.backgroundColor) return;
-    ctx.save();
-    ctx.fillStyle = this.backgroundColor;
-    ctx.fillRect(x, y, this.width.activePixelValue, this.height.activePixelValue);
-    ctx.restore();
-  }
-
+  // Todo clean up
   private calculateTextLines(ctx: CanvasRenderingContext2D): TextLine[] {
-    if ( // Check if current cache can be used
-      this.textLinesCache[0] === this.textContent
-      && this.textLinesCache[1] === this.width.activePixelValue
-    ) return this.textLinesCache[2];
+    // if ( // Check if current cache can be used
+    //   this.textLinesCache[0] === this.textContent
+    //   && this.textLinesCache[1] === this.width.activePixelValue
+    // ) return this.textLinesCache[2];
 
     ctx.save();
     const fontString = this.getFontString();
     ctx.font = fontString;
+    ctx.letterSpacing = `${this.letterSpacing}px`;
 
+    const spaceMetrics = ctx.measureText(' ');
     const wordMetrics = this.textContent.split(' ').map((word) => ({
       word,
       metrics: ctx.measureText(word),
     }));
-    const spaceMetrics = ctx.measureText(' ');
+    const fontHeight = spaceMetrics.fontBoundingBoxAscent + spaceMetrics.fontBoundingBoxDescent;
+    const lineHeightPx = fontHeight * this.lineHeight;
+    const paddedLineHeight = ((this.lineHeight - 1) * fontHeight) / 2;
 
     let currentLineIndex = 0;
     const lines: TextLine[] = [];
     const createLine = (word: string, width: number) => {
-      lines.push({ words: [word], width });
+      let y = 0;
+      let yMax = 0;
+      if (!lines.length) {
+        y = paddedLineHeight;
+        yMax = lineHeightPx;
+      }
+      else {
+        const prevLine = lines[lines.length - 1];
+        y = prevLine.yMax;
+        yMax = prevLine.yMax + lineHeightPx - paddedLineHeight;
+      }
+
+      lines.push({ words: [word], width, y, yMax });
     }
-    // Create line with first word as no checks need to happen and first line needs to exist
-    // remove first from array
+    // Create line with first word as no checks need to happen 
+    // and first line needs to exist remove first from array
     createLine(wordMetrics[0].word, wordMetrics[0].metrics.width);
     wordMetrics.shift();
 
@@ -154,27 +133,32 @@ export default class Text extends Layer {
     }
     ctx.restore();
 
-    this.textLinesCache[0] = this.textContent;
-    this.textLinesCache[1] = this.width.activePixelValue;
-    this.textLinesCache[2] = lines;
+    // this.textLinesCache[0] = this.textContent;
+    // this.textLinesCache[1] = this.width.activePixelValue;
+    // this.textLinesCache[2] = lines;
 
     return lines;
   }
 
   // Todo leverage line caching for these so they don't have to be recalculated every render
   private drawTextLines(ctx: CanvasRenderingContext2D, x: number, y: number) {
-    const lineHeight = this.fontSize * this.lineHeight;
     const lines = this.calculateTextLines(ctx);
-
     const fontString = this.getFontString();
+    ctx.fillStyle = this.color;
+    ctx.textBaseline = 'bottom'; // Bottom to achieve correct line height
+    ctx.letterSpacing = `${this.letterSpacing}px`;
+    ctx.lineJoin = 'round'; // Removes text stroke sharp edges and artifacts, but may arguably be somewhat "incorrect"
     ctx.font = fontString;
+
+    // Todo can be returned from calculateTextLines
+    const spaceMetrics = ctx.measureText(' ');
+    const fontHeight = spaceMetrics.fontBoundingBoxAscent + spaceMetrics.fontBoundingBoxDescent;
     // Draw each line
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const lineContent = line.words.join(' ');
-      const lineY = y + (i * lineHeight);
-      this.setStroke(lineContent, ctx, x, lineY);
-      ctx.fillText(lineContent, x, lineY);
+      this.setTextStroke(lineContent, ctx, x, y + fontHeight + line.y);
+      ctx.fillText(lineContent, x, y + fontHeight + line.y);
     }
   }
 
@@ -183,12 +167,13 @@ export default class Text extends Layer {
   seedComputedUnits(ctx: CanvasRenderingContext2D) {
     const computedUnits = super.seedComputedUnits(ctx);
     const lines = this.calculateTextLines(ctx);
-    const lineHeight = this.fontSize * this.lineHeight;
-    const height = lines.length * lineHeight;
+    const lastLine = lines.pop();
+    const height = lastLine?.yMax;
 
     for (const unit of computedUnits) {
       if (unit.dependency === ComputedNumberDependency.auto) {
-        unit.seed(height);
+        if (!height) continue; // excessive, ts
+        unit.seed(height + this.padding[0].activePixelValue + this.padding[2].activePixelValue || 0);
         continue;
       }
     }
@@ -198,13 +183,9 @@ export default class Text extends Layer {
 
   render(canvas: Canvas, parentMatrix: DOMMatrix) {
     super.render(canvas, parentMatrix, (ctx, x, y) => {
-      this.setBackground(ctx, x, y);
-      this.setShadow(ctx);
-      ctx.fillStyle = this.fill;
-      ctx.textBaseline = 'top';
-      ctx.letterSpacing = `${this.letterSpacing}px`;
-      ctx.lineJoin = 'round'; // Removes text stroke sharp edges and artifacts, but may arguably be somewhat "incorrect"
-      if (this.textContent) this.drawTextLines(ctx, x, y);
+      if (!this.textContent) return;
+      this.setTextShadow(ctx);
+      this.drawTextLines(ctx, x, y);
     });
   }
 }

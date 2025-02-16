@@ -1,73 +1,17 @@
+// ! This class may be completely excesive as layer is a rect
 import Layer, { LayerOptions } from './Layer';
 import type Canvas from '../Canvas';
 
-export type RectOptions = LayerOptions & {
-  fill?: string;
-  radius?: number | [number, number, number, number];
-  strokeColor?: string;
-  strokeWidth?: number;
-  shadowColor?: string;
-  shadowBlur?: number;
-  shadowOffsetX?: number;
-  shadowOffsetY?: number;
-};
-
-const settableValues = [
-  'fill',
-  'radius',
-  'strokeColor',
-  'strokeWidth',
-  'shadowColor',
-  'shadowBlur',
-  'shadowOffsetX',
-  'shadowOffsetY',
-];
+export type RectOptions = LayerOptions & {};
 
 export default class Rect extends Layer {
-  fill: string;
-  radius: number | [number, number, number, number]; // todo should be computed, allow for 50% to make circles for example
-  strokeColor: string;
-  strokeWidth: number;
-  shadowColor?: string;
-  shadowBlur: number;
-  shadowOffsetX: number;
-  shadowOffsetY: number;
-
   constructor(options: RectOptions) {
-    super(options, settableValues);
-    this.fill = options.fill || 'rgba(0,0,0,0)';
-    this.radius = options.radius || 0;
-    this.strokeColor = options.strokeColor || 'rgba(0,0,0,0)';
-    this.strokeWidth = options.strokeWidth || 0;
-    this.shadowColor = options.shadowColor;
-    this.shadowBlur = options.shadowBlur || 0;
-    this.shadowOffsetX = options.shadowOffsetX || 0;
-    this.shadowOffsetY = options.shadowOffsetY || 0;
-  }
-
-  private setShadow(ctx: CanvasRenderingContext2D) {
-    if (!this.shadowColor) return;
-    ctx.shadowColor = this.shadowColor;
-    ctx.shadowBlur = this.shadowBlur;
-    ctx.shadowOffsetX = this.shadowOffsetX;
-    ctx.shadowOffsetY = this.shadowOffsetY;
-  }
-
-  private setStroke(ctx: CanvasRenderingContext2D) {
-    if (!this.strokeWidth) return;
-    ctx.strokeStyle = this.strokeColor;
-    ctx.lineWidth = this.strokeWidth;
-    ctx.stroke();  
+    super(options);
   }
 
   render(canvas: Canvas, parentMatrix: DOMMatrix) {
     super.render(canvas, parentMatrix, (ctx, x, y) => {
-      ctx.beginPath();
-      this.setShadow(ctx);
-      ctx.fillStyle = this.fill;
-      ctx.roundRect(x, y, this.width.activePixelValue, this.height.activePixelValue, this.radius);
-      this.setStroke(ctx);
-      ctx.fill();
+      // console.log('Rect');
     });
   }
 }

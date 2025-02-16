@@ -1,5 +1,5 @@
 import './style.css'
-import { Canvas, Rect, Text, Component } from "./canvas/index";
+import { Canvas, Layer, TextLayer, Component, ImageLayer } from "./canvas/index";
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <canvas id="canvas1" style="border: 1px solid cyan;"></canvas>
@@ -32,9 +32,9 @@ const canvas2 = new Canvas(document.querySelector<HTMLCanvasElement>('#canvas2')
 
 // Todo create component abstract
 new Component((node) =>
-  node(Rect, { className: 'one' }, [
-    node(Rect, { className: 'two' }, [
-      node(Rect, { className: 'three' }),
+  node(Layer, { className: 'one' }, [
+    node(Layer, { className: 'two' }, [
+      node(Layer, { className: 'three' }),
     ]),
   ]),
 );
@@ -50,87 +50,116 @@ new Component(`
 // button.query('background').set('fill', 'red');
 // button.query('text').set('text', 'Hello world');
 
-const background = new Rect({
+const background = new Layer({
   className: 'background',
   x: '10%',
   y: '10%',
   width: '80vw',
   height: '80%',
-  fill: 'green',
+  backgroundColor: 'green',
   radius: [40, 0, 0, 0],
   strokeColor: 'black',
   strokeWidth: 1,
 });
 canvas2.add(background);
 
-const textBox = new Rect({
+const textBox = new Layer({
   className: 'background2',
   x: '10%',
   y: '10%',
   width: '50%',
   height: '300px',
-  rotation: 20,
+  rotation: 10,
   scaleX: 0.8,
-  fill: 'cyan',
+  backgroundColor: 'cyan',
+  radius: '40px 10px',
+  margin: [10, 10],
 });
 canvas2.add(textBox);
 
-const text = new Text({
+const text = new TextLayer({
   className: 'text',
-  textContent: 'Hello There World More Text MORE text',
-  fontWeight: 'bold',
+  textContent: 'Hello There World Morg Text MORE text',
+  fontWeight: '600',
   fontStyle: 'normal',
   fontFamily: 'Helvetica',
-  lineHeight: 1.2,
+  lineHeight: 1,
   letterSpacing: 0,
   fontSize: 40,
   backgroundColor: 'purple',
-  x: '10%',
-  y: 30,
+  x: 0,
+  y: 0,
   width: '80%',
   height: 'auto',
-  fill: 'red',
-  strokeColor: 'black',
-  strokeWidth: 10,
-  shadowColor: 'rgba(0, 0, 0, 0.5)',
-  shadowBlur: 10,
-  shadowOffsetX: 0,
-  shadowOffsetY: 40,
+  color: 'red',
+  textStrokeColor: 'black',
+  textStrokeWidth: 10,
+  textShadowColor: 'rgba(0, 0, 0, 0.5)',
+  textShadowBlur: 10,
+  textShadowOffsetX: 0,
+  textShadowOffsetY: 40,
+  margin: [20, 0],
+  padding: [30, 0],
+  // shadowColor: 'rgba(0, 0, 0, 0.5)',
+  // shadowBlur: 10,
+  // shadowOffsetX: 0,
+  // shadowOffsetY: 40,
 });
 textBox.addChild(text);
 
-const backgroundC1 = new Rect({
+const image = new ImageLayer({
+  src: 'https://nl.wikipedia.org/static/images/icons/wikipedia.png',
+  x: '40%',
+  y: 100,
+  width: '10%',
+  height: 'auto',
+});
+canvas2.add(image);
+
+const backgroundC1 = new Layer({
   className: 'background',
   x: '10%',
   y: '10%',
   width: '80vw',
   height: '80%',
-  fill: 'orange',
+  backgroundColor: 'orange',
   radius: [40, 0, 0, 0],
   strokeColor: 'black',
   strokeWidth: 20,
 });
 canvas.add(backgroundC1);
 
+const circle = new Layer({
+  className: 'background',
+  x: '200px',
+  y: '200px',
+  width: 200,
+  height: 200,
+  backgroundColor: 'purple',
+  strokeColor: 'black',
+  strokeWidth: 10,
+  radius: '50%',
+});
+canvas.add(circle);
 
-const rect = new Rect({
+const rect = new Layer({
   className: 'rect',
   x: 10,
   y: 10,
   width: 200,
   height: 150,
-  fill: 'rgba(255, 0, 0, 0.8)',
+  backgroundColor: 'rgba(255, 0, 0, 0.8)',
   strokeWidth: 4,
   strokeColor: 'rgba(0, 255, 0, 0.8)',
 });
 
-const rectChild1 = new Rect({
+const rectChild1 = new Layer({
   className: 'rectChild1',
   x: 10,
   y: 10,
   width: 100,
   height: 75,
-  fill: 'rgba(0, 255, 255, 0.82)',
+  backgroundColor: 'rgba(0, 255, 255, 0.82)',
   scaleX: 1,
   scaleY: 1,
   skewX: 0,
@@ -145,13 +174,13 @@ const rectChild1 = new Rect({
   shadowOffsetY: 200,
 });
 
-const rectChild2 = new Rect({
+const rectChild2 = new Layer({
   className: 'rectChild2',
   x: '50%',
   y: 50,
   width: 30,
   height: 50,
-  fill: 'cyan',
+  backgroundColor: 'cyan',
   scaleX: 1,
   scaleY: 1,
   skewX: 20,

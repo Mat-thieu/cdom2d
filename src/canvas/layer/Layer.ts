@@ -3,8 +3,12 @@ import { AnyLayer } from '../types/AnyLayer';
 import matrixDecompose from '../util/decompose-matrix';
 import { ExtendedSet } from '../util/ExtendedSet';
 import ComputedNumber, { ComputedNumberDerivative, ComputedNumberDependency, ComputedNumberUnit } from '../util/unit/ComputedNumber';
+import parseMultiSideCompoundType, { MultiSideCompoundType } from '../util/unit/parse-multi-side-compound-type';
+
+
 
 export type LayerOptions = {
+  className?: string;
   x?: number | string;
   y?: number | string;
   skewX?: number;
@@ -14,10 +18,26 @@ export type LayerOptions = {
   rotation?: number;
   width?: number | string;
   height?: number | string;
-  className?: string;
+  margin?: MultiSideCompoundType;
+  padding?: MultiSideCompoundType;
+  backgroundColor?: string;
+  radius?: MultiSideCompoundType;
+  strokeColor?: string;
+  strokeWidth?: number;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  fontSize?: number;
+  fontStyle?: string;
+  fontWeight?: string;
+  fontFamily?: string;
+  letterSpacing?: number;
+  lineHeight?: number;
+  color?: string;
 };
 
-export default abstract class Layer {
+export default class Layer {
   canvas: Canvas | null = null;
   parentLayer: Layer | null = null;
   layers: ExtendedSet<AnyLayer> = new ExtendedSet();
@@ -26,6 +46,7 @@ export default abstract class Layer {
 
   className: string = '';
 
+  // general box and matrix
   x: ComputedNumber;
   y: ComputedNumber;
   skewX: number;
@@ -35,6 +56,27 @@ export default abstract class Layer {
   rotation: number;
   width: ComputedNumber;
   height: ComputedNumber;
+  margin: [ComputedNumber, ComputedNumber, ComputedNumber, ComputedNumber];
+  padding: [ComputedNumber, ComputedNumber, ComputedNumber, ComputedNumber];
+
+  // box
+  backgroundColor: string;
+  radius: [ComputedNumber, ComputedNumber, ComputedNumber, ComputedNumber]; // todo should be computed, allow for 50% to make circles for example
+  strokeColor: string;
+  strokeWidth: number;
+  shadowColor?: string;
+  shadowBlur: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+
+  // Inheritable text properties
+  fontSize: number;
+  fontStyle: string;
+  fontWeight: string;
+  fontFamily: string;
+  letterSpacing: number;
+  lineHeight: number;
+  color: string;
 
   settableValues = [
     'x',
@@ -46,6 +88,23 @@ export default abstract class Layer {
     'rotation',
     'width',
     'height',
+    'margin',
+    'padding',
+    'backgroundColor',
+    'radius',
+    'strokeColor',
+    'strokeWidth',
+    'shadowColor',
+    'shadowBlur',
+    'shadowOffsetX',
+    'shadowOffsetY',
+    'fontSize',
+    'fontStyle',
+    'fontWeight',
+    'fontFamily',
+    'letterSpacing',
+    'lineHeight',
+    'color',
   ];
 
   // Track per-element if a visual change occurs, then allow each connected canvas to redraw it as such
@@ -62,16 +121,33 @@ export default abstract class Layer {
 
   constructor(options: LayerOptions, settableValues: string[] = []) {
     this.settableValues = this.settableValues.concat(settableValues);
-    this.width = new ComputedNumber(options.width || 0, ComputedNumberDerivative.width);
-    this.height = new ComputedNumber(options.height || 0, ComputedNumberDerivative.height);
-    this.x = new ComputedNumber(options.x || 0, ComputedNumberDerivative.width);
-    this.y = new ComputedNumber(options.y || 0, ComputedNumberDerivative.height);
+    this.className = options.className || '';
+    this.width = new ComputedNumber(options.width || 0, ComputedNumberDerivative.width, ComputedNumberDependency.parent);
+    this.height = new ComputedNumber(options.height || 0, ComputedNumberDerivative.height, ComputedNumberDependency.parent);
+    this.x = new ComputedNumber(options.x || 0, ComputedNumberDerivative.width, ComputedNumberDependency.parent);
+    this.y = new ComputedNumber(options.y || 0, ComputedNumberDerivative.height, ComputedNumberDependency.parent);
     this.skewX = options.skewX || 0;
     this.skewY = options.skewY || 0;
     this.scaleX = options.scaleX || 1;
     this.scaleY = options.scaleY || 1;
     this.rotation = options.rotation || 0;
-    this.className = options.className || '';
+    this.margin = parseMultiSideCompoundType(options.margin || 0);
+    this.padding = parseMultiSideCompoundType(options.padding || 0);
+    this.backgroundColor = options.backgroundColor || 'rgba(0,0,0,0)';
+    this.radius = parseMultiSideCompoundType(options.radius || 0, ComputedNumberDependency.self);
+    this.strokeColor = options.strokeColor || 'rgba(0,0,0,0)';
+    this.strokeWidth = options.strokeWidth || 0;
+    this.shadowColor = options.shadowColor;
+    this.shadowBlur = options.shadowBlur || 0;
+    this.shadowOffsetX = options.shadowOffsetX || 0;
+    this.shadowOffsetY = options.shadowOffsetY || 0;
+    this.fontSize = options.fontSize || 30; // should probably not be default, and be a computed number
+    this.fontStyle = options.fontStyle || 'normal';
+    this.fontWeight = options.fontWeight || 'normal';
+    this.fontFamily = options.fontFamily || 'serif';
+    this.letterSpacing = options.letterSpacing || 0;
+    this.lineHeight = options.lineHeight || 1;
+    this.color = options.color || 'rgba(0,0,0,0)';
   }
 
   // ! Todo a lot, this is very clumsy and error prone
@@ -198,11 +274,15 @@ export default abstract class Layer {
   // getLayoutDimensionBounds()
 
   seedComputedUnits(ctx: CanvasRenderingContext2D) {
+    // Order matters, we first need the parent dimensions to calculate the self-dependant dimensions like margin, padding, radius
     const computedUnits = [
       this.width,
       this.height,
       this.x,
       this.y,
+      ...this.radius,
+      ...this.margin,
+      ...this.padding,
     ];
 
     // todo this is kinda messy
@@ -218,7 +298,12 @@ export default abstract class Layer {
           unit.seed(this.parentLayer[targetProperty].activePixelValue);
         } else if (this.canvas) {
           unit.seed(this.canvas[targetProperty].activePixelValue);
-        }        
+        }
+        continue;      
+      }
+      if (unit.dependency === ComputedNumberDependency.self) {
+        const targetProperty = unit.derivative === ComputedNumberDerivative.width ? 'width' : 'height';
+        unit.seed(this[targetProperty].activePixelValue);
       }
     }
 
@@ -242,6 +327,37 @@ export default abstract class Layer {
     this.points[3] = swMatrix.transformPoint();
   }
 
+  private setShadow(ctx: CanvasRenderingContext2D) {
+    if (!this.shadowColor) return;
+    ctx.shadowColor = this.shadowColor;
+    ctx.shadowBlur = this.shadowBlur;
+    ctx.shadowOffsetX = this.shadowOffsetX;
+    ctx.shadowOffsetY = this.shadowOffsetY;
+  }
+
+  private setStroke(ctx: CanvasRenderingContext2D) {
+    if (!this.strokeWidth) return;
+    ctx.strokeStyle = this.strokeColor;
+    ctx.lineWidth = this.strokeWidth;
+    ctx.stroke();  
+  }
+
+  private renderBox(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    ctx.save();
+    ctx.beginPath();
+    this.setShadow(ctx);
+    ctx.fillStyle = this.backgroundColor;
+    ctx.roundRect(x, y, this.width.activePixelValue, this.height.activePixelValue, [
+      this.radius[0].activePixelValue,
+      this.radius[1].activePixelValue,
+      this.radius[2].activePixelValue,
+      this.radius[3].activePixelValue,
+    ]);
+    this.setStroke(ctx);
+    ctx.fill();
+    ctx.restore();
+  }
+
   render(
     canvas: Canvas,
     parentMatrix: DOMMatrix,
@@ -253,8 +369,11 @@ export default abstract class Layer {
 
     const centerWidth = this.width.activePixelValue / 2;
     const centerHeight = this.height.activePixelValue / 2;
+    const x = this.x.activePixelValue + centerWidth + this.margin[3].activePixelValue;
+    const y = this.y.activePixelValue + centerHeight + this.margin[0].activePixelValue;
+
     const m = new DOMMatrix();
-    m.translateSelf(this.x.activePixelValue + centerWidth, this.y.activePixelValue + centerHeight); // center-center origin
+    m.translateSelf(x, y); // center-center origin
     // Todo consider sensical order of transformations, swap around scale/skew?
     m.rotateSelf(this.rotation);
     m.scaleSelf(this.scaleX, this.scaleY);
@@ -268,8 +387,13 @@ export default abstract class Layer {
 
     this.storePointsFromMatrix(m);
 
+    this.renderBox(ctx, -centerWidth, -centerHeight);
+
+    const childX = -centerWidth + this.padding[3].activePixelValue;
+    const childY = -centerHeight + this.padding[0].activePixelValue;
+    
     // Run layertype specfic render logic
-    if (renderLayerType) renderLayerType(ctx, -centerWidth, -centerHeight); // Todo return bounds by which we can clip for overflow hidden
+    if (renderLayerType) renderLayerType(ctx, childX, childY); // Todo return bounds by which we can clip for overflow hidden
 
     ctx.restore();
 
@@ -278,28 +402,28 @@ export default abstract class Layer {
     for (const layer of this.layers) layer.render(canvas, childMatrix);
 
     // ! DEBUG Draw and get points of box
-    // ctx.save();
+    ctx.save();
 
-    // ctx.fillStyle = 'yellow';
+    ctx.fillStyle = 'yellow';
 
-    // const pointArgs = (point: DOMPoint, size = 6) => {
-    //   return [
-    //     point.x - (size / 2),
-    //     point.y - (size / 2),
-    //     size,
-    //     size,
-    //   ];
-    // }
+    const pointArgs = (point: DOMPoint, size = 6) => {
+      return [
+        point.x - (size / 2),
+        point.y - (size / 2),
+        size,
+        size,
+      ];
+    }
 
-    // // @ts-expect-error
-    // ctx.fillRect(...pointArgs(nwPoint));
-    // // @ts-expect-error
-    // ctx.fillRect(...pointArgs(nePoint));
-    // // @ts-expect-error
-    // ctx.fillRect(...pointArgs(sePoint));
-    // // @ts-expect-error
-    // ctx.fillRect(...pointArgs(swPoint));
+    // @ts-expect-error
+    ctx.fillRect(...pointArgs(this.points[0]));
+    // @ts-expect-error
+    ctx.fillRect(...pointArgs(this.points[1]));
+    // @ts-expect-error
+    ctx.fillRect(...pointArgs(this.points[2]));
+    // @ts-expect-error
+    ctx.fillRect(...pointArgs(this.points[3]));
 
-    // ctx.restore();
+    ctx.restore();
   }
 }
