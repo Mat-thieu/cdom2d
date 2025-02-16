@@ -15,7 +15,6 @@ The focus of this library is to provide a minimum viable set of tools for drawin
   - [x] Rect
   - [x] Text (partial, font load listener missing)
   - [x] Image (very basic)
-  - [ ] Video
 - [x] Click and hit detection
 - [x] Indexing
 - [x] Computed units
